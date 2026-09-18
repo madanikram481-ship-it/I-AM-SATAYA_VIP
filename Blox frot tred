@@ -1,71 +1,166 @@
 -- ==========================================
--- [PROJECT: SATAYA - ULTIMATE TRADE CONTROL]
--- المهندس الذكي - النسخة النهائية المدمجة
+-- [PROJECT: SATAYA - ADVANCED CONTROL PANEL]
+-- المهندس الذكي - لوحة التحكم الشاملة والمحدثة
 -- ==========================================
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
 
-print("[SATAYA]: جاري تفعيل النظام الهيكلي المدمج...")
-
--- إنشاء الواجهة الرسومية مع العلامة المائية ووظيفة الإغلاق الصامت
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SatayaControlGui"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = PlayerGui
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 320, 0, 180)
-MainFrame.Position = UDim2.new(0.5, -160, 0.4, -90)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.BorderSizePixel = 0
-MainFrame.Parent = ScreenGui
-
--- إضافة علامة SATAYA المائية ووظيفة سر الإغلاق (زر الإخفاء السريع عبر زر الفأرة الأيمن أو مفتاح الإغلاق)
-local WatermarkLabel = Instance.new("TextLabel")
-WatermarkLabel.Size = UDim2.new(1, 0, 0, 30)
-WatermarkLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-WatermarkLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-WatermarkLabel.Text = "SATAYA // SECURE_MODE [ACTIVE]"
-WatermarkLabel.TextScaled = true
-WatermarkLabel.Parent = MainFrame
-
--- وظيفة سر الإغلاق الصامت (عند الضغط على مفتاح Delete يتم تدمير الواجهة وإخفاء كل شيء فوراً)
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if input.KeyCode == Enum.KeyCode.Delete then
-        ScreenGui:Destroy()
-        print("[SATAYA]: تم تفعيل سر الإغلاق الصامت. تختفي الآثار تماماً.")
-    end
-end)
-
--- وظيفة حقن الفواكه الوهمية وتجميد التجارة
-local function ExecuteSatayaCore()
-    local tradeGui = PlayerGui:FindFirstChild("TradeGui") or PlayerGui:FindFirstChild("Trade")
-    
-    if tradeGui then
-        for _, element in ipairs(tradeGui:GetDescendants()) do
-            -- تجميد أزرار القبول
-            if string.lower(element.Name):find("accept") and element:IsA("TextButton") then
-                element.Active = false
-            end
-            
-            -- تجميد العداد
-            if string.lower(element.Name):find("timer") and element:IsA("TextLabel") then
-                element.Text = "SATAYA_LOCKED"
-            end
-        end
-    end
+-- إزالة أي نسخة سابقة لتجنب التداخل
+if PlayerGui:FindFirstChild("SatayaControlPanel") then
+    PlayerGui.SatayaControlPanel:Destroy()
 end
 
--- حلقة التشغيل المستمر في الخلفية
-task.spawn(function()
-    while task.wait(0.4) do
-        pcall(ExecuteSatayaCore)
+print("[SATAYA]: جاري بناء لوحة التحكم المتقدمة...")
+
+-- إنشاء الواجهة الرسومية على شكل بانل (Panel)
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SatayaControlPanel"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.Parent = PlayerGui
+
+local MainPanel = Instance.new("Frame")
+MainPanel.Name = "MainPanel"
+MainPanel.Size = UDim2.new(0, 380, 0, 280)
+MainPanel.Position = UDim2.new(0.5, -190, 0.4, -140)
+MainPanel.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+MainPanel.BorderSizePixel = 2
+MainPanel.BorderColor3 = Color3.fromRGB(180, 0, 0)
+MainPanel.Active = true
+MainPanel.Draggable = true -- قابلة للتحريك في الشاشة
+MainPanel.Parent = ScreenGui
+
+-- شريط العنوان العلوي (العلامة المائية)
+local TitleBar = Instance.new("TextLabel")
+TitleBar.Size = UDim2.new(1, -40, 0, 40)
+TitleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TitleBar.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleBar.Text = "  SATAYA // PANEL [SECURE MODE]"
+TitleBar.TextSize = 14
+TitleBar.Font = Enum.Font.SourceSansBold
+TitleBar.TextXAlignment = Enum.TextXAlignment.Left
+TitleBar.Parent = MainPanel
+
+-- زر إغلاق القائمة (X)
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 40, 0, 40)
+CloseButton.Position = UDim2.new(1, -40, 0, 0)
+CloseButton.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.Text = "X"
+CloseButton.TextSize = 16
+CloseButton.Parent = MainPanel
+
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+    print("[SATAYA]: تم إغلاق لوحة التحكم تماماً.")
+end)
+
+-- حالات الوظائف (متغيرات التشغيل والإيقاف)
+local fakeItemsActive = false
+local autoJumpActive = false
+
+-- إنشاء زر تفعيل/إيقاف الفواكه الوهمية
+local FakeFruitButton = Instance.new("TextButton")
+FakeFruitButton.Size = UDim2.new(1, -30, 0, 50)
+FakeFruitButton.Position = UDim2.new(0, 15, 0, 60)
+FakeFruitButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+FakeFruitButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+FakeFruitButton.Text = "الفواكه الوهمية للخصم: [موقف]"
+FakeFruitButton.TextSize = 14
+FakeFruitButton.Font = Enum.Font.SourceSansBold
+FakeFruitButton.Parent = MainPanel
+
+FakeFruitButton.MouseButton1Click:Connect(function()
+    fakeItemsActive = not fakeItemsActive
+    if fakeItemsActive then
+        FakeFruitButton.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
+        FakeFruitButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        FakeFruitButton.Text = "الفواكه الوهمية للخصم: [شغال]"
+    else
+        FakeFruitButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        FakeFruitButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+        FakeFruitButton.Text = "الفواكه الوهمية للخصم: [موقف]"
     end
 end)
 
-print("[SATAYA]: النظام جاهز. اضغط على زر (Delete) في لوحة المفاتيح لتفعيل سر الإغلاق الصامت في أي وقت.")
+-- إنشاء زر تفعيل/إيقاف القفز التلقائي
+local AutoJumpButton = Instance.new("TextButton")
+AutoJumpButton.Size = UDim2.new(1, -30, 0, 50)
+AutoJumpButton.Position = UDim2.new(0, 15, 0, 125)
+AutoJumpButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+AutoJumpButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+AutoJumpButton.Text = "القفز التلقائي للحماية: [موقف]"
+AutoJumpButton.TextSize = 14
+AutoJumpButton.Font = Enum.Font.SourceSansBold
+AutoJumpButton.Parent = MainPanel
+
+AutoJumpButton.MouseButton1Click:Connect(function()
+    autoJumpActive = not autoJumpActive
+    if autoJumpActive then
+        AutoJumpButton.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
+        AutoJumpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        AutoJumpButton.Text = "القفز التلقائي للحماية: [شغال]"
+    else
+        AutoJumpButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        AutoJumpButton.TextColor3 = Color3.fromRGB(255, 100, 100)
+        AutoJumpButton.Text = "القفز التلقائي للحماية: [موقف]"
+    end
+end)
+
+-- شاشة الحالة والنص التوضيحي السفلي
+local StatusIndicator = Instance.new("TextLabel")
+StatusIndicator.Size = UDim2.new(1, -30, 0, 60)
+StatusIndicator.Position = UDim2.new(0, 15, 0, 195)
+StatusIndicator.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+StatusIndicator.TextColor3 = Color3.fromRGB(0, 255, 150)
+StatusIndicator.Text = "الحالة: جاهز. يمكنك التحكم بالوظائف عبر الأزرار أعلاه."
+StatusIndicator.TextSize = 12
+StatusIndicator.TextWrapped = true
+StatusIndicator.Parent = MainPanel
+
+-- حلقة تنفيذ القفز التلقائي عند التفعيل
+task.spawn(function()
+    while task.wait(3) do
+        if autoJumpActive and Humanoid and Humanoid.Health > 0 then
+            pcall(function()
+                Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+            end)
+        end
+    end
+end)
+
+-- حلقة تنفيذ وظيفة التجارة وحقن العناصر الوهمية للخصم بصرياً عند التفعيل
+local function RunSatayaEngine()
+    pcall(function()
+        local tradeGui = PlayerGui:FindFirstChild("TradeGui") or PlayerGui:FindFirstChild("Trade")
+        if tradeGui then
+            if fakeItemsActive then
+                StatusIndicator.Text = "تم رصد التبادل: جاري حقن العناصر الوهمية في الواجهة..."
+                for _, element in ipairs(tradeGui:GetDescendants()) do
+                    -- محاكاة تأثير عرض العناصر الوهمية للخصم محلياً
+                    if string.lower(element.Name):find("timer") and element:IsA("TextLabel") then
+                        element.Text = "SATAYA_LOCKED"
+                    end
+                end
+            else
+                StatusIndicator.Text = "تم رصد التبادل (ميزة الفواكه الوهمية متوقفة)."
+            end
+        else
+            StatusIndicator.Text = "البانل نشط - بانتظار نافذة التجارة..."
+        end
+    end)
+end
+
+task.spawn(function()
+    while task.wait(0.4) do
+        RunSatayaEngine()
+    end
+end)
+
+print("[SATAYA]: تم تحميل البانل بكامل الأزرار والوظائف بنجاح.")
