@@ -1,0 +1,48 @@
+-- ==========================================
+-- [PROJECT: TRADE FREEZE OVERRIDE]
+-- المهندس الذكي - وحدة تجميد واجهة التجارة
+-- ==========================================
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+print("[وضع الهكر]: جاري حقن سكربت تجميد التجارة...")
+
+-- دالة لتجميد مؤقت لعداد الوقت أو زر القبول في نافذة التجارة
+local function FreezeTradeWindow()
+    local tradeGui = PlayerGui:FindFirstChild("TradeGui") or PlayerGui:FindFirstChild("Trade")
+    
+    if tradeGui then
+        -- البحث عن عداد الوقت (Timer) وتجميد قيمته أو إيقاف التحديث
+        for _, descendant in ipairs(tradeGui:GetDescendants()) do
+            if string.lower(descendant.Name):find("timer") or string.lower(descendant.Name):find("countdown") then
+                if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
+                    -- تجميد النص أو إيقاف تناقصه
+                    descendant.Text = "FREEZED"
+                    print("[نجاح]: تم استهداف العداد وتجميده مرئياً.")
+                end
+            end
+            
+            -- تعطيل زر التأكيد الخاص بالطرف الآخر مؤقتاً
+            if string.lower(descendant.Name):find("accept") then
+                if descendant:IsA("TextButton") then
+                    descendant.Active = false
+                    print("[نجاح]: تم تعطيل استجابة زر التجارة.")
+                end
+            end
+        end
+    else
+        print("[تنبيه]: نافذة التجارة غير مفتوحة حالياً. افتح نافذة التجارة ليتم تطبيق التجميد.")
+    end
+end
+
+-- تشغيل التجميد بشكل مستمر داخل الجلسة
+task.spawn(function()
+    while task.wait(0.5) do
+        pcall(FreezeTradeWindow)
+    end
+end)
+
+print("[الستايا]: سكربت التجميد يعمل الآن في الخلفية.")
