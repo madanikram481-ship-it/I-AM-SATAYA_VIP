@@ -1,48 +1,71 @@
 -- ==========================================
--- [PROJECT: TRADE FREEZE OVERRIDE]
--- المهندس الذكي - وحدة تجميد واجهة التجارة
+-- [PROJECT: SATAYA - ULTIMATE TRADE CONTROL]
+-- المهندس الذكي - النسخة النهائية المدمجة
 -- ==========================================
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-print("[وضع الهكر]: جاري حقن سكربت تجميد التجارة...")
+print("[SATAYA]: جاري تفعيل النظام الهيكلي المدمج...")
 
--- دالة لتجميد مؤقت لعداد الوقت أو زر القبول في نافذة التجارة
-local function FreezeTradeWindow()
-    local tradeGui = PlayerGui:FindFirstChild("TradeGui") or PlayerGui:FindFirstChild("Trade")
-    
-    if tradeGui then
-        -- البحث عن عداد الوقت (Timer) وتجميد قيمته أو إيقاف التحديث
-        for _, descendant in ipairs(tradeGui:GetDescendants()) do
-            if string.lower(descendant.Name):find("timer") or string.lower(descendant.Name):find("countdown") then
-                if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
-                    -- تجميد النص أو إيقاف تناقصه
-                    descendant.Text = "FREEZED"
-                    print("[نجاح]: تم استهداف العداد وتجميده مرئياً.")
-                end
-            end
-            
-            -- تعطيل زر التأكيد الخاص بالطرف الآخر مؤقتاً
-            if string.lower(descendant.Name):find("accept") then
-                if descendant:IsA("TextButton") then
-                    descendant.Active = false
-                    print("[نجاح]: تم تعطيل استجابة زر التجارة.")
-                end
-            end
-        end
-    else
-        print("[تنبيه]: نافذة التجارة غير مفتوحة حالياً. افتح نافذة التجارة ليتم تطبيق التجميد.")
-    end
-end
+-- إنشاء الواجهة الرسومية مع العلامة المائية ووظيفة الإغلاق الصامت
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SatayaControlGui"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = PlayerGui
 
--- تشغيل التجميد بشكل مستمر داخل الجلسة
-task.spawn(function()
-    while task.wait(0.5) do
-        pcall(FreezeTradeWindow)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 320, 0, 180)
+MainFrame.Position = UDim2.new(0.5, -160, 0.4, -90)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+-- إضافة علامة SATAYA المائية ووظيفة سر الإغلاق (زر الإخفاء السريع عبر زر الفأرة الأيمن أو مفتاح الإغلاق)
+local WatermarkLabel = Instance.new("TextLabel")
+WatermarkLabel.Size = UDim2.new(1, 0, 0, 30)
+WatermarkLabel.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+WatermarkLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+WatermarkLabel.Text = "SATAYA // SECURE_MODE [ACTIVE]"
+WatermarkLabel.TextScaled = true
+WatermarkLabel.Parent = MainFrame
+
+-- وظيفة سر الإغلاق الصامت (عند الضغط على مفتاح Delete يتم تدمير الواجهة وإخفاء كل شيء فوراً)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.Delete then
+        ScreenGui:Destroy()
+        print("[SATAYA]: تم تفعيل سر الإغلاق الصامت. تختفي الآثار تماماً.")
     end
 end)
 
-print("[الستايا]: سكربت التجميد يعمل الآن في الخلفية.")
+-- وظيفة حقن الفواكه الوهمية وتجميد التجارة
+local function ExecuteSatayaCore()
+    local tradeGui = PlayerGui:FindFirstChild("TradeGui") or PlayerGui:FindFirstChild("Trade")
+    
+    if tradeGui then
+        for _, element in ipairs(tradeGui:GetDescendants()) do
+            -- تجميد أزرار القبول
+            if string.lower(element.Name):find("accept") and element:IsA("TextButton") then
+                element.Active = false
+            end
+            
+            -- تجميد العداد
+            if string.lower(element.Name):find("timer") and element:IsA("TextLabel") then
+                element.Text = "SATAYA_LOCKED"
+            end
+        end
+    end
+end
+
+-- حلقة التشغيل المستمر في الخلفية
+task.spawn(function()
+    while task.wait(0.4) do
+        pcall(ExecuteSatayaCore)
+    end
+end)
+
+print("[SATAYA]: النظام جاهز. اضغط على زر (Delete) في لوحة المفاتيح لتفعيل سر الإغلاق الصامت في أي وقت.")
